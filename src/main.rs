@@ -1,24 +1,13 @@
+use dotenv::dotenv;
 use once_cell::sync::OnceCell;
-use poise::{serenity_prelude::{self as serenity, OnlineStatus, Activity}, Event::Ready};
+use poise::serenity_prelude::{self as serenity, Activity, OnlineStatus};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 // User data, which is stored and accessible in all command invocations
-struct Data {}
+    struct Data {}
 
 pub static CTX: OnceCell<serenity::Context> = OnceCell::new();
-
-/// Displays your or another user's account creation date
-#[poise::command(slash_command, prefix_command)]
-async fn age(
-    ctx: Context<'_>,
-    #[description = "Selected user"] user: Option<serenity::User>,
-) -> Result<(), Error> {
-    let u = user.as_ref().unwrap_or_else(|| ctx.author());
-    let response = format!("{}'s account was created at {}", u.name, u.created_at());
-    ctx.say(response).await?;
-    Ok(())
-}
 
 #[poise::command(prefix_command)]
 async fn register(ctx: Context<'_>) -> Result<(), Error> {
@@ -53,7 +42,14 @@ async fn event_listener(
         }
         poise::Event::ReactionRemove { removed_reaction } => {
             if removed_reaction.emoji.unicode_eq("📌") {
-                if removed_reaction.message(&ctx).await?.reactions.iter().find(|r| r.reaction_type.unicode_eq("📌")).is_none() {
+                if removed_reaction
+                    .message(&ctx)
+                    .await?
+                    .reactions
+                    .iter()
+                    .find(|r| r.reaction_type.unicode_eq("📌"))
+                    .is_none()
+                {
                     removed_reaction.message(&ctx).await?.unpin(&ctx).await?;
                 }
             }
@@ -65,9 +61,10 @@ async fn event_listener(
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![age(), register()],
+            commands: vec![register()],
             listener: |ctx, event, framework, user_data| {
                 Box::pin(event_listener(ctx, event, framework, user_data))
             },
